@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react'
+import React, { useContext, useEffect } from 'react'
 import { useMapBox } from '../hooks/useMapBox';
+import {SocketContext} from '../context/SocketContext';
 
 const puntoInicial = {
   lng: -122.4725,
@@ -9,20 +10,38 @@ const puntoInicial = {
 
 export const MapaPage = () => {
 
+  const {socket} = useContext(SocketContext)
+
   const {
     setRefDivMap,
     coords,
     nuevoMarcador$,
-    movimientoMarcador$
+    movimientoMarcador$,
+    agregarMarcador
   } = useMapBox(puntoInicial) //Estudiar este Hook
   
+  // Esuchar los marcadores nuevos
+  useEffect(() => {
+    socket.on('marcador-nuevo', marcador => {
+      agregarMarcador( marcador, marcador.id )
+    })
+  },[socket, agregarMarcador])
   
+  // Listen active markers
+  useEffect(() => {
+    socket.on('marcadores-activos', (marcadores) => {
+      for(const key of Object.keys(marcadores)){
+        agregarMarcador( marcadores[key], key)
+      }
+    })
+  },[socket, agregarMarcador])
+
   useEffect(() => {
     nuevoMarcador$.subscribe(marcador => {
-      //Emitir nuevo marcador
+      socket.emit('marcador-nuevo', marcador)
     })
+  },[nuevoMarcador$, socket])
 
-  },[nuevoMarcador$])
 
   useEffect(() => {
     movimientoMarcador$.subscribe(marcador => {
